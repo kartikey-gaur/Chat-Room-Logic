@@ -13,27 +13,32 @@ const wss = new WebSocketServer({ server }); //WebSocketServer here is instancti
 
 let usercount = 0;
 
-wss.on("connection", function connectionHere(socket) {
+wss.on("connection", function connectionHere(socket) { // socket here represents the new connection between client and server
     socket.on("error", console.error); //console.log(error) is same as console.error
 
     //the below method is that when we receive data from the clients
     //then, for each connected client, we must send something to the clients
+    //the below code receives messages from client
+
     socket.on("message", function messageHere(data, isBinary) {
         //console.log(data);
         wss.clients.forEach(function each(client) {
-            if (client.readyState === WebSocket.OPEN) {
-                client.send(data,{ binary: isBinary });
+            if (client !== socket && client.readyState === WebSocket.OPEN) {
+                client.send("Friend: " + data,{ binary: false });
             }
         });
     });
-    console.log('user connnected: ', ++usercount);
-    socket.send("hi there, how are you doing, is it good over there, huh?");
+    //console.log('user connnected: ', ++usercount);
+    //the below line sends the code to the client
+    socket.send("Send messages to start chatting");
 });
 
 //websocket logic ends
 server.listen(port, function () {
     console.log(' Server is listening on port 8080');
 });
+
+//client !== socket : additional condition to not thte data sen tby the user itself to the user back
 
 
 //same code using Express.JS
