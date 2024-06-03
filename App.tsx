@@ -1,57 +1,66 @@
-import { useEffect, useState } from 'react'
-import './App.css'
+import WebSocket, { WebSocketServer } from "ws";
+import http from 'http';
+const port = 8080;
 
-function App() {
-  //the <> contains the type of state can be out of many
-  const [socket, setSocket] = useState<null | WebSocket>(null) ;
-  const [message, setMessages] = useState("") ;
-  const[reply, setReply] = useState("") ;
+const server = http.createServer(function (request: any, response: any) {
+    console.log((new Date()) + ' Received request for ' + request.url);
+    response.end("hi there");
+});
 
-  useEffect(()=>{
-    const socketIn = new WebSocket("ws://localhost:8080") ;
-    socketIn.onopen = () =>{
-      console.log("the server is connected") ;
-      setSocket(socketIn) ;
-    }
-    socketIn.onmessage = (message) => {
-      console.log(`message has been received ${message.data}`) ;
-      setMessages(message.data) ;
-    }
+//Websocket logic starts
 
-    return () =>{
-      socketIn.close() ;
-    }
-  }, []);
+const wss = new WebSocketServer({ server }); //WebSocketServer here is instanctized
 
-  if(!socket)
-    {
-      return (
-        <div>
-          <h1>
-            Loading....
-          </h1>
-        </div>
-      )
-    }
+let usercount = 0;
 
-    return (
-      <div>
-        <input style= {{height: 40, width: 500}}type="text" onChange={(res)=>{
-          const currMessage = res.target.value ;
-          setReply(currMessage) ;
-        }}/>
-        <br /><br />
-        <button onClick={()=>{
-           if (socket) {
-            socket.send(reply);
-        }
-        }}>Send me the message</button>
-        <h2>
-          {message}
-        </h2>
-      </div>
-    )
+wss.on("connection", function connectionHere(socket) { // socket here represents the new connection between client and server
+    socket.on("error", console.error); //console.log(error) is same as console.error
 
-}
+    //the below method is that when we receive data from the clients
+    //then, for each connected client, we must send something to the clients
+    //the below code receives messages from client
 
-export default App
+    socket.on("message", function messageHere(data, isBinary) {
+        //console.log(data);
+        wss.clients.forEach(function each(client) {
+            if (client !== socket && client.readyState === WebSocket.OPEN) {
+                client.send("Friend: " + data,{ binary: false });
+            }
+        });
+    });
+    //console.log('user connnected: ', ++usercount);
+    //the below line sends the code to the client
+    socket.send("Send messages to start chatting");
+});
+
+//websocket logic ends
+server.listen(port, function () {
+    console.log(' Server is listening on port 8080');
+});
+
+//client !== socket : additional condition to not thte data sen tby the user itself to the user back
+
+
+//same code using Express.JS
+
+/* import express from 'express'
+import WebSocket, { WebSocketServer } from 'ws'
+
+const app = express()
+const httpServer = app.listen(8080)
+
+const wss = new WebSocketServer({ server: httpServer });
+
+wss.on('connection', (ws)=> {
+  ws.on('error', console.error);
+
+  ws.on('message', (data, isBinary) =>{
+    wss.clients.forEach(function each(client) {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(data, { binary: false });
+      }
+    });
+  });
+
+  ws.send('Hello! Message From Server!!');
+}); */
